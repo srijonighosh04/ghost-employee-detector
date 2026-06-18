@@ -1,0 +1,5 @@
+Metadata-Version: 2.4
+Name: knowledge_graph
+Version: 1.0.0
+Requires-Dist: neo4j
+Dynamic: requires-dist
