@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: ai_engine
+Version: 1.0.0
+Requires-Dist: langchain
+Requires-Dist: langchain-community
+Requires-Dist: langchain-google-genai
+Requires-Dist: pydantic
+Dynamic: requires-dist
