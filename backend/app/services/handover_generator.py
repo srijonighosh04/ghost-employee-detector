@@ -4,118 +4,135 @@ from app.models import Employee, DocumentRecord
 from app.services.simulator import run_resignation_simulation
 from app.services.ai_assistant import get_gemini_model
 
+
 def generate_handover_document(db: Session, employee_id: str) -> dict:
-    """
-    Generates an AI-drafted handover document for the employee.
-    Uses the LangChain handover chain from the ai_engine package if available.
-    """
     employee = db.query(Employee).filter(Employee.id == employee_id).first()
     if not employee:
         return None
-        
+
     sim = run_resignation_simulation(db, employee_id)
     owned = employee.owned_projects
     authored_docs = db.query(DocumentRecord).filter(DocumentRecord.author_id == employee_id).all()
-    
-    # Prepare parameters for the AI Engine chain
-    employee_data = {
-        "id": employee.id,
-        "name": employee.name,
-        "role": employee.role,
-        "team": employee.team,
-        "tenure_years": employee.tenure_years,
-        "owned_projects_names": ", ".join([p.name for p in owned]) if owned else "None",
-        "authored_docs_names": ", ".join([d.title for d in authored_docs]) if authored_docs else "None"
-    }
-    
-    # Try executing the LangChain handover chain from the ai_engine package
-    try:
-        from ai_engine.chains.handover_chain import run_handover_chain
-        return run_handover_chain(employee_data, sim)
-    except Exception as e:
-        print(f"Warning: Failed to execute handover chain: {e}. Falling back to default template.")
 
-            
-    # Template-Based fallback mode (rich, custom, grounded in DB records)
-    # 1. Scope Section
-    projects_text = ", ".join([p.name for p in owned]) if owned else "no active projects"
-    scope_body = (
-        f"Covers the {len(owned)} project(s) owned by {employee.name} ({projects_text}) "
-        f"and the working knowledge behind them. As a {employee.role} on the {employee.team} team with a tenure of "
-        f"{employee.tenure_years} years, they hold a high amount of implicit domain experience."
-    )
-    
-    # 2. Existing Docs Section
-    if authored_docs:
-        doc_names = []
-        for d in authored_docs:
-            doc_names.append(f"'{d.title}' ({d.staleness})")
-        docs_body = (
-            f"{len(authored_docs)} document(s) already exist: {', '.join(doc_names)}. "
-            f"Treat anything marked 'stale' as a starting point only; these will require immediate "
-            f"refresh sessions prior to resignation."
-        )
-    else:
-        docs_body = (
-            "No documentation is currently attributed to this person in the graph — "
-            "this brief is the first written record."
-        )
-        
-    # 3. Gaps Section
-    if sim["undocumented_areas"]:
-        gaps_body = (
-            "The following high-risk knowledge gaps were identified: "
-            + " ".join(sim["undocumented_areas"])
-            + " These areas represent processes known only to this employee and must be documented."
-        )
-    else:
-        gaps_body = (
-            "No major undocumented areas were flagged, though a short shadowing period of "
-            "regular day-to-day work is still recommended."
-        )
-        
-    # 4. Ramp Plan Section
-    successor_weeks = sim["estimated_ramp_weeks"]
-    ramp_body = (
-        f"Pair a successor on the next active cycle of each owned project, and budget roughly "
-        f"{successor_weeks} weeks before they can operate independently. Focus the transition sessions "
-        f"on the undocumented areas identified in the knowledge graph."
-    )
-    
-    # Add special high-fidelity briefs for e1 for a premium UX
-    if employee_id == "e1":
-        return {
-            "employee_id": employee_id,
-            "title": "Knowledge Transfer Brief — Priya Nair, Core Deployment Pipeline",
-            "generated_at": "Generated just now",
-            "sections": [
-                {
-                    "heading": "Scope",
-                    "body": "Covers release orchestration, rollback procedures, and the multi-region failover path currently held informally by Priya Nair."
-                },
-                {
-                    "heading": "Existing documentation",
-                    "body": "2 documents already exist: 'Deploy Pipeline Runbook' (stale) and 'Failover Drill Postmortem' (stale). Treat anything marked stale as a starting point only."
-                },
-                {
-                    "heading": "Open knowledge gaps",
-                    "body": "Manual rollback sequence for region-level outages. Tribal knowledge of CI runner quirks not in any runbook. Informal escalation path with the cloud provider's TAM."
-                },
-                {
-                    "heading": "Suggested successor ramp plan",
-                    "body": f"Pair Daniel Osei on the next two deploy cycles, shadow the next failover drill end-to-end, and schedule a recorded walkthrough of the rollback sequence within the estimated {successor_weeks} weeks ramp window."
+    now = datetime.utcnow().strftime("%B %d, %Y at %H:%M UTC")
+    title = f"Knowledge Transfer Brief — {employee.name}, {employee.role}"
+
+    # Try Gemini first
+    model = get_gemini_model()
+    if model:
+        owned_names = ", ".join([p.name for p in owned]) if owned else "None"
+        doc_list = ", ".join([f"{d.title} ({d.staleness})" for d in authored_docs]) if authored_docs else "None"
+        impacted = ", ".join([f"{p['name']} ({p['severity']})" for p in sim["impacted_projects"]]) if sim else "Unknown"
+        ramp = sim["estimated_ramp_weeks"] if sim else "Unknown"
+        gap = sim["knowledge_gap_score"] if sim else "Unknown"
+
+        prompt = f"""Generate a professional Knowledge Transfer Brief for the following employee leaving the organization.
+
+Employee: {employee.name}
+Role: {employee.role}
+Team: {employee.team}
+Tenure: {employee.tenure_years} years
+Knowledge Risk Score: {employee.risk_score} ({employee.risk_level})
+Documentation Coverage: {employee.documentation_coverage}%
+Owned Projects: {owned_names}
+Authored Documents: {doc_list}
+Impacted Projects on Departure: {impacted}
+Estimated Successor Ramp: {ramp} weeks
+Knowledge Gap Score: {gap}
+
+Write exactly 4 sections with these headings (use the exact heading text):
+1. Scope
+2. Existing documentation
+3. Open knowledge gaps
+4. Suggested successor ramp plan
+
+Each section should be 2-4 sentences, professional, specific to the data above. Do not add extra headings or preamble. Format as:
+HEADING: <heading>
+BODY: <body>
+(repeat for each section)"""
+
+        try:
+            response = model.generate_content(prompt)
+            raw = response.text.strip()
+            sections = []
+            current_heading = None
+            current_body_lines = []
+
+            for line in raw.splitlines():
+                line = line.strip()
+                if line.startswith("HEADING:"):
+                    if current_heading and current_body_lines:
+                        sections.append({"heading": current_heading, "body": " ".join(current_body_lines).strip()})
+                    current_heading = line.replace("HEADING:", "").strip()
+                    current_body_lines = []
+                elif line.startswith("BODY:"):
+                    current_body_lines = [line.replace("BODY:", "").strip()]
+                elif current_heading and line:
+                    current_body_lines.append(line)
+
+            if current_heading and current_body_lines:
+                sections.append({"heading": current_heading, "body": " ".join(current_body_lines).strip()})
+
+            if len(sections) >= 2:
+                return {
+                    "employee_id": employee_id,
+                    "title": title,
+                    "generated_at": now,
+                    "sections": sections,
                 }
-            ]
-        }
-        
+        except Exception as e:
+            print(f"Gemini handover generation failed: {e}. Using fallback.")
+
+    # Template fallback
+    ramp_weeks = sim["estimated_ramp_weeks"] if sim else max(2, round(employee.tenure_years * 1.6))
+    gap_score = sim["knowledge_gap_score"] if sim else round(employee.risk_score * 0.6 + (100 - employee.documentation_coverage) * 0.4)
+    undoc = sim.get("undocumented_areas", []) if sim else []
+    impacted_projects = sim.get("impacted_projects", []) if sim else []
+
+    sections = [
+        {
+            "heading": "Scope",
+            "body": (
+                f"This brief covers the {len(owned)} project(s) owned by {employee.name} "
+                f"({', '.join([p.name for p in owned]) or 'none'}) and the institutional knowledge behind them. "
+                f"{employee.name} has been with the organization for {employee.tenure_years} years on the {employee.team} team, "
+                f"accumulating significant undocumented context that this document aims to surface."
+            ),
+        },
+        {
+            "heading": "Existing documentation",
+            "body": (
+                f"{len(authored_docs)} document(s) are currently attributed to {employee.name}: "
+                f"{', '.join([d.title for d in authored_docs]) or 'none'}. "
+                + ("Documents marked as stale should be treated as starting points only and verified before handover." if any(d.staleness == "stale" for d in authored_docs) else "")
+                + (f" Overall documentation coverage is critically low at {employee.documentation_coverage}% — this brief is essential." if employee.documentation_coverage < 40 else "")
+            ) if authored_docs else (
+                f"No documentation is currently attributed to {employee.name} in the knowledge graph. "
+                f"This brief represents the first written record of their institutional knowledge. "
+                f"Immediate shadowing sessions are strongly recommended."
+            ),
+        },
+        {
+            "heading": "Open knowledge gaps",
+            "body": (
+                (undoc[0] if undoc else f"Day-to-day operational decisions on {', '.join([p.name for p in owned[:2]]) or 'key projects'} are largely undocumented. ")
+                + f"Knowledge gap score is {gap_score}/100. "
+                + (f"Projects at immediate risk: {', '.join([p['name'] for p in impacted_projects[:3]])}." if impacted_projects else "")
+            ),
+        },
+        {
+            "heading": "Suggested successor ramp plan",
+            "body": (
+                f"Budget approximately {ramp_weeks} weeks for a successor to reach operational independence. "
+                f"Pair them on the next active cycle of each owned project and schedule weekly knowledge-transfer sessions for the first month. "
+                f"Prioritize documenting live operational procedures before departure and assign a buddy from the {employee.team} team."
+            ),
+        },
+    ]
+
     return {
         "employee_id": employee_id,
         "title": title,
-        "generated_at": "Generated just now",
-        "sections": [
-            {"heading": "Scope", "body": scope_body},
-            {"heading": "Existing documentation", "body": docs_body},
-            {"heading": "Open knowledge gaps", "body": gaps_body},
-            {"heading": "Suggested successor ramp plan", "body": ramp_body}
-        ]
+        "generated_at": now,
+        "sections": sections,
     }

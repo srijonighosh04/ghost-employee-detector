@@ -2,9 +2,8 @@ import os
 from sqlalchemy.orm import Session
 from app.models import Employee, Project, DocumentRecord, Team
 from app.core.config import settings
-from app.services.simulator import run_resignation_simulation
 
-# Initialize Gemini if key is provided
+
 def get_gemini_model():
     api_key = settings.effective_gemini_api_key
     if not api_key:
@@ -17,126 +16,165 @@ def get_gemini_model():
         print(f"Error configuring Gemini client: {e}")
         return None
 
-def answer_user_query(db: Session, query: str) -> dict:
-    """
-    Answers user questions about the organization's knowledge graph.
-    Uses LangChain and Gemini from the ai_engine package if available.
-    """
+
+def _build_org_context(db: Session) -> str:
     db_employees = db.query(Employee).all()
     db_projects = db.query(Project).all()
     db_docs = db.query(DocumentRecord).all()
     db_teams = db.query(Team).all()
-    
-    # Build database context snapshot
-    emp_list = []
+
+    emp_lines = []
     for e in db_employees:
         owned = [p.name for p in e.owned_projects]
-        emp_list.append(
-            f"- {e.name} (Role: {e.role}, Team: {e.team}, "
-            f"Risk Score: {e.risk_score}, Risk Level: {e.risk_level}, "
-            f"Doc Coverage: {e.documentation_coverage}%, Dependents: {e.dependents}, "
-            f"Owned Projects: {owned})"
+        emp_lines.append(
+            f"- {e.name} | Role: {e.role} | Team: {e.team} | Risk Score: {e.risk_score} | "
+            f"Risk Level: {e.risk_level} | Doc Coverage: {e.documentation_coverage}% | "
+            f"Dependents: {e.dependents} | Tenure: {e.tenure_years} yrs | Owned Projects: {owned or 'None'}"
         )
-        
-    proj_list = []
+
+    proj_lines = []
     for p in db_projects:
         contribs = [c.name for c in p.contributors]
-        owner_name = p.owner.name if p.owner else "None"
-        proj_list.append(
-            f"- {p.name} (Status: {p.status}, Owner: {owner_name}, Team: {p.team}, Contributors: {contribs})"
+        proj_lines.append(
+            f"- {p.name} | Status: {p.status} | Team: {p.team} | "
+            f"Owner ID: {p.owner_id} | Contributors: {contribs or 'None'}"
         )
-        
-    team_list = []
-    for t in db_teams:
-        m_names = [m.name for m in t.members]
-        team_list.append(f"- {t.name} (Members: {m_names})")
-        
-    db_context = (
-        "EMPLOYEES:\n" + "\n".join(emp_list) + "\n\n"
-        "PROJECTS:\n" + "\n".join(proj_list) + "\n\n"
-        "TEAMS:\n" + "\n".join(team_list)
-    )
-    
-    # Try executing the LangChain assistant chain from the ai_engine package
-    try:
-        from ai_engine.chains.assistant_chain import run_assistant_chain
-        return run_assistant_chain(query, db_context)
-    except Exception as e:
-        print(f"Warning: Failed to execute RAG assistant chain: {e}. Falling back to db local lookup.")
+
+    doc_lines = [
+        f"- {d.title} | Type: {d.type} | Staleness: {d.staleness} | Last Updated: {d.last_updated} | Author ID: {d.author_id}"
+        for d in db_docs
+    ]
+
+    team_lines = [f"- {t.name} (ID: {t.id})" for t in db_teams]
+
+    return f"""=== ORGANIZATIONAL KNOWLEDGE GRAPH ===
+
+EMPLOYEES:
+{chr(10).join(emp_lines)}
+
+PROJECTS:
+{chr(10).join(proj_lines)}
+
+DOCUMENTS:
+{chr(10).join(doc_lines)}
+
+TEAMS:
+{chr(10).join(team_lines)}
+"""
 
 
-    # Rule-Based Fallback Mode (Grounded in DB data)
+def _keyword_fallback(db: Session, query: str) -> dict:
+    """Rich rule-based fallback when Gemini is unavailable."""
     q = query.lower()
-    
-    # 1. Look for employee-related query
-    matched_employee = None
-    for emp in db_employees:
-        first_name = emp.name.split(" ")[0].lower()
-        if emp.name.lower() in q or first_name in q:
-            matched_employee = emp
-            break
-            
-    # 2. Look for project-related query
-    matched_project = None
-    for proj in db_projects:
-        if proj.name.lower() in q:
-            matched_project = proj
-            break
+    employees = db.query(Employee).all()
+    projects = db.query(Project).all()
+    docs = db.query(DocumentRecord).all()
 
-    # Scenario A: Project query about owner/status
-    if matched_project and any(kw in q for kw in ["responsible", "owns", "who", "owner"]):
-        owner = matched_project.owner
-        docs = db.query(DocumentRecord).filter(DocumentRecord.author_id == matched_project.owner_id).all()
-        doc_titles = [d.title for d in docs]
-        
-        if owner:
-            risk_text = " That combination makes this project a single point of failure right now." if owner.risk_score >= 75 else ""
-            content = f"{owner.name} owns {matched_project.name} ({matched_project.status.replace('-', ' ')}). Their Knowledge Risk Score is {owner.risk_score}, and documentation coverage for their work sits at {owner.documentation_coverage}%.{risk_text}"
-            return {
-                "content": content,
-                "cited_docs": doc_titles
-            }
-        else:
-            return {
-                "content": f"No owner is currently assigned to {matched_project.name} in the graph.",
-                "cited_docs": []
-            }
-            
-    # Scenario B: Resignation/Impact query on Employee
-    if matched_employee and any(kw in q for kw in ["depend", "impact", "leave", "resign", "quit"]):
-        sim = run_resignation_simulation(db, matched_employee.id)
-        if sim and sim["impacted_projects"]:
-            names = ", ".join([p["name"] for p in sim["impacted_projects"]])
-            content = f"{len(sim['impacted_projects'])} active project(s) depend on {matched_employee.name}: {names}. Estimated ramp time for a successor is {sim['estimated_ramp_weeks']} weeks, with a knowledge gap score of {sim['knowledge_gap_score']}."
-        else:
-            content = f"No active projects currently depend solely on {matched_employee.name}."
-            
-        docs = db.query(DocumentRecord).filter(DocumentRecord.author_id == matched_employee.id).all()
-        doc_titles = [d.title for d in docs]
+    # Find mentioned employee
+    emp = next(
+        (e for e in employees if e.name.lower() in q or e.name.split()[0].lower() in q), None
+    )
+    # Find mentioned project
+    proj = next((p for p in projects if p.name.lower() in q), None)
+
+    # Who owns / responsible for a project
+    if proj and any(w in q for w in ["responsible", "owns", "who", "owner"]):
+        owner = next((e for e in employees if e.id == proj.owner_id), None)
+        cited = [d.title for d in docs if d.author_id == (owner.id if owner else None)]
         return {
-            "content": content,
-            "cited_docs": doc_titles
+            "content": (
+                f"{owner.name} owns {proj.name} ({proj.status.replace('-', ' ')}). "
+                f"Their Knowledge Risk Score is {owner.risk_score} with "
+                f"{owner.documentation_coverage}% documentation coverage."
+                + (" That makes this project a single point of failure." if owner.risk_score >= 75 else "")
+                if owner else f"No owner is currently assigned to {proj.name}."
+            ),
+            "cited_docs": cited,
         }
-        
-    # Scenario C: Simple Employee Info query
-    if matched_employee:
+
+    # What happens if someone leaves
+    if emp and any(w in q for w in ["leave", "resign", "impact", "depend", "what if", "happen"]):
+        owned = [p for p in projects if p.owner_id == emp.id]
+        cited = [d.title for d in docs if d.author_id == emp.id]
+        gap_score = round(emp.risk_score * 0.6 + (100 - emp.documentation_coverage) * 0.4)
+        ramp = max(2, round(emp.tenure_years * 1.6))
         return {
-            "content": f"{matched_employee.name} is a {matched_employee.role} on the {matched_employee.team} team, with a Knowledge Risk Score of {matched_employee.risk_score} ({matched_employee.risk_level}). Documentation coverage for their work is {matched_employee.documentation_coverage}%, and {matched_employee.dependents} people or processes currently depend on them."
+            "content": (
+                f"If {emp.name} leaves, {len(owned)} project(s) are immediately impacted: "
+                f"{', '.join(p.name for p in owned) or 'none'}. "
+                f"Knowledge gap score: {gap_score}. "
+                f"Estimated successor ramp: {ramp} weeks."
+            ),
+            "cited_docs": cited,
         }
-        
-    # Scenario D: Simple Project Info query
-    if matched_project:
-        owner_name = matched_project.owner.name if matched_project.owner else "no one"
+
+    # General employee info
+    if emp:
+        owned = [p.name for p in projects if p.owner_id == emp.id]
         return {
-            "content": f"{matched_project.name} is currently {matched_project.status.replace('-', ' ')}, owned by {owner_name}, with {len(matched_project.contributors)} contributor(s)."
+            "content": (
+                f"{emp.name} is a {emp.role} on {emp.team}. "
+                f"Knowledge Risk Score: {emp.risk_score} ({emp.risk_level}). "
+                f"Documentation coverage: {emp.documentation_coverage}%. "
+                f"Dependents: {emp.dependents}. Owned projects: {', '.join(owned) or 'none'}."
+            ),
+            "cited_docs": [],
         }
-        
-    # General Info
+
+    # General project info
+    if proj:
+        owner = next((e for e in employees if e.id == proj.owner_id), None)
+        return {
+            "content": (
+                f"{proj.name} is currently {proj.status.replace('-', ' ')}, "
+                f"owned by {owner.name if owner else 'no one'}, "
+                f"under {proj.team}."
+            ),
+            "cited_docs": [],
+        }
+
+    # High-risk overview
+    if any(w in q for w in ["high risk", "critical", "dangerous", "top risk"]):
+        critical = sorted(employees, key=lambda e: e.risk_score, reverse=True)[:3]
+        lines = [f"{e.name} ({e.risk_level}, score {e.risk_score})" for e in critical]
+        return {
+            "content": f"Top knowledge risks right now: {', '.join(lines)}.",
+            "cited_docs": [],
+        }
+
     return {
         "content": (
-            "I can answer questions grounded in the database knowledge graph — try asking about "
-            "a specific person (\"What does Priya Nair own?\"), a project (\"Who is responsible "
-            "for the Subscription Billing Engine?\"), or an impact scenario (\"What happens if "
-            "Tobias Hahn leaves?\")."
-        )
+            "I can answer questions about employee ownership, project dependencies, "
+            "documentation staleness, and resignation impact. Try asking: "
+            "'Who owns the Core Deployment Pipeline?' or 'What happens if Priya Nair leaves?'"
+        ),
+        "cited_docs": [],
     }
+
+
+def answer_user_query(db: Session, query: str) -> dict:
+    model = get_gemini_model()
+
+    if model:
+        org_context = _build_org_context(db)
+        system_prompt = f"""You are Sentinel's AI Knowledge Assistant. You have access to the organization's knowledge graph below.
+Answer questions about ownership, dependencies, risk scores, documentation coverage, and resignation impact.
+Be concise but specific. Always cite employee names and project names from the graph.
+If you mention documents, list their titles.
+
+{org_context}"""
+        try:
+            response = model.generate_content(
+                f"{system_prompt}\n\nUser question: {query}"
+            )
+            cited = []
+            docs = db.query(DocumentRecord).all()
+            resp_text = response.text
+            for d in docs:
+                if d.title.lower() in resp_text.lower():
+                    cited.append(d.title)
+            return {"content": resp_text, "cited_docs": cited}
+        except Exception as e:
+            print(f"Gemini call failed: {e}. Using fallback.")
+
+    return _keyword_fallback(db, query)

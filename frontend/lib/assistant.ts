@@ -1,6 +1,8 @@
 import { employees, projects, documents } from "@/lib/mock-data";
-import { getSimulation } from "@/lib/simulate";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
+// --- Local fallback (keyword-based) ---
 function findEmployee(query: string) {
   const q = query.toLowerCase();
   return employees.find(
@@ -13,7 +15,7 @@ function findProject(query: string) {
   return projects.find((p) => q.includes(p.name.toLowerCase()));
 }
 
-export function answerQuery(query: string): { content: string; citedDocs?: string[] } {
+function localAnswer(query: string): { content: string; citedDocs?: string[] } {
   const q = query.toLowerCase();
   const employee = findEmployee(query);
   const project = findProject(query);
@@ -34,12 +36,13 @@ export function answerQuery(query: string): { content: string; citedDocs?: strin
   }
 
   if (employee && (q.includes("depend") || q.includes("impact") || q.includes("leave") || q.includes("resign"))) {
-    const sim = getSimulation(employee.id);
-    const names = sim.impactedProjects.map((p) => p.name).join(", ");
+    const owned = projects.filter((p) => p.ownerId === employee.id);
+    const gap = Math.round(employee.riskScore * 0.6 + (100 - employee.documentationCoverage) * 0.4);
+    const ramp = Math.max(2, Math.round(employee.tenureYears * 1.6));
     return {
       content:
-        sim.impactedProjects.length > 0
-          ? `${sim.impactedProjects.length} active project${sim.impactedProjects.length > 1 ? "s" : ""} depend on ${employee.name}: ${names}. Estimated ramp time for a successor is ${sim.estimatedRampWeeks} weeks, with a knowledge gap score of ${sim.knowledgeGapScore}.`
+        owned.length > 0
+          ? `${owned.length} active project(s) depend on ${employee.name}: ${owned.map((p) => p.name).join(", ")}. Estimated ramp time for a successor is ${ramp} weeks, with a knowledge gap score of ${gap}.`
           : `No active projects currently depend solely on ${employee.name}.`,
       citedDocs: documents.filter((d) => d.authorId === employee.id).map((d) => d.title),
     };
@@ -60,6 +63,25 @@ export function answerQuery(query: string): { content: string; citedDocs?: strin
 
   return {
     content:
-      "I can answer questions grounded in the knowledge graph — try asking about a specific person (\"What does Priya Nair own?\"), a project (\"Who is responsible for the Subscription Billing Engine?\"), or an impact scenario (\"What happens if Tobias Hahn leaves?\").",
+      "I can answer questions about ownership, dependencies, documentation staleness, and what happens when someone leaves. Try asking: 'Who owns the Core Deployment Pipeline?' or 'What happens if Priya Nair leaves?'",
   };
+}
+
+// --- Main export: tries real backend first, falls back to local ---
+export async function answerQuery(
+  query: string
+): Promise<{ content: string; citedDocs?: string[] }> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/assistant/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message: query }),
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!res.ok) throw new Error(`Backend ${res.status}`);
+    const data = await res.json();
+    return { content: data.content, citedDocs: data.citedDocs ?? data.cited_docs ?? [] };
+  } catch {
+    return localAnswer(query);
+  }
 }

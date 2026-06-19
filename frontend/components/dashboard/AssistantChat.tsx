@@ -35,9 +35,9 @@ export function AssistantChat() {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, thinking]);
 
-  function send(text: string) {
+  async function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed || thinking) return;
     fireHaptic("tap");
 
     const userMsg: ChatMessage = { id: crypto.randomUUID(), role: "user", content: trimmed };
@@ -45,15 +45,21 @@ export function AssistantChat() {
     setInput("");
     setThinking(true);
 
-    setTimeout(() => {
-      const { content, citedDocs } = answerQuery(trimmed);
+    try {
+      const { content, citedDocs } = await answerQuery(trimmed);
       setMessages((m) => [
         ...m,
         { id: crypto.randomUUID(), role: "assistant", content, citedDocs },
       ]);
-      setThinking(false);
       fireHaptic("success");
-    }, 650);
+    } catch {
+      setMessages((m) => [
+        ...m,
+        { id: crypto.randomUUID(), role: "assistant", content: "Something went wrong. Please try again." },
+      ]);
+    } finally {
+      setThinking(false);
+    }
   }
 
   return (
@@ -115,7 +121,8 @@ export function AssistantChat() {
             <button
               key={s}
               onClick={() => send(s)}
-              className="press-feedback rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate hover:text-bone hover:bg-white/[0.06]"
+              disabled={thinking}
+              className="press-feedback rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 text-xs text-slate hover:text-bone hover:bg-white/[0.06] disabled:opacity-50"
             >
               {s}
             </button>
@@ -132,12 +139,14 @@ export function AssistantChat() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             placeholder="Ask the knowledge graph a question…"
-            className="glass-inset flex-1 rounded-full px-4 py-3 text-sm text-bone placeholder:text-slate focus:outline-none"
+            disabled={thinking}
+            className="glass-inset flex-1 rounded-full px-4 py-3 text-sm text-bone placeholder:text-slate focus:outline-none disabled:opacity-50"
           />
           <button
             type="submit"
+            disabled={thinking}
             aria-label="Send message"
-            className="press-feedback flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-signal text-[#1A1206] shadow-glow-amber hover:bg-signal-glow"
+            className="press-feedback flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-signal text-[#1A1206] shadow-glow-amber hover:bg-signal-glow disabled:opacity-50"
           >
             <Send size={16} />
           </button>

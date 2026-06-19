@@ -1,6 +1,8 @@
 import { employees, projects, simulations } from "@/lib/mock-data";
 import { SimulationResult, RiskLevel } from "@/types";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 function severityFor(score: number): RiskLevel {
   if (score >= 80) return "critical";
   if (score >= 60) return "high";
@@ -8,7 +10,7 @@ function severityFor(score: number): RiskLevel {
   return "low";
 }
 
-export function getSimulation(employeeId: string): SimulationResult {
+function localSimulation(employeeId: string): SimulationResult {
   if (simulations[employeeId]) return simulations[employeeId];
 
   const employee = employees.find((e) => e.id === employeeId);
@@ -53,4 +55,33 @@ export function getSimulation(employeeId: string): SimulationResult {
         ? [`Day-to-day decisions on ${owned[0]?.name ?? "their primary project"} aren't written down anywhere`]
         : [],
   };
+}
+
+function mapApiResult(data: any, employeeId: string): SimulationResult {
+  return {
+    employeeId,
+    impactedProjects: (data.impactedProjects ?? data.impacted_projects ?? []).map((p: any) => ({
+      projectId: p.projectId ?? p.project_id,
+      name: p.name,
+      severity: p.severity,
+      reason: p.reason,
+    })),
+    impactedTeammates: data.impactedTeammates ?? data.impacted_teammates ?? 0,
+    knowledgeGapScore: data.knowledgeGapScore ?? data.knowledge_gap_score ?? 0,
+    estimatedRampWeeks: data.estimatedRampWeeks ?? data.estimated_ramp_weeks ?? 0,
+    undocumentedAreas: data.undocumentedAreas ?? data.undocumented_areas ?? [],
+  };
+}
+
+export async function getSimulation(employeeId: string): Promise<SimulationResult> {
+  try {
+    const res = await fetch(`${API_URL}/api/v1/simulator/${employeeId}`, {
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!res.ok) throw new Error(`Backend ${res.status}`);
+    const data = await res.json();
+    return mapApiResult(data, employeeId);
+  } catch {
+    return localSimulation(employeeId);
+  }
 }

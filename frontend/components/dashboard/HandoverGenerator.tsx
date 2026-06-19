@@ -21,15 +21,19 @@ export function HandoverGenerator() {
 
   const employee = employees.find((e) => e.id === selectedId) ?? employees[0];
 
-  function generate() {
+  async function generate() {
     fireHaptic("tap");
     setGenerating(true);
     setDoc(null);
-    setTimeout(() => {
-      setDoc(getHandoverDoc(employee.id));
-      setGenerating(false);
+    try {
+      const result = await getHandoverDoc(employee.id);
+      setDoc(result);
       fireHaptic("success");
-    }, 900);
+    } catch {
+      // fallback already handled in lib/handover.ts
+    } finally {
+      setGenerating(false);
+    }
   }
 
   function download() {

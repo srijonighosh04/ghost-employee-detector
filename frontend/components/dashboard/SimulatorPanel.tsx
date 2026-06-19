@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { employees } from "@/lib/mock-data";
 import { getSimulation } from "@/lib/simulate";
+import { useEffect, useState } from "react";
 import { Avatar } from "@/components/ui/Avatar";
 import { RiskBadge } from "@/components/ui/RiskBadge";
 import { GlassPanel } from "@/components/ui/GlassPanel";
@@ -20,7 +21,16 @@ export function SimulatorPanel() {
   const [selectedId, setSelectedId] = useState(initial);
 
   const employee = employees.find((e) => e.id === selectedId) ?? employees[0];
-  const result = getSimulation(employee.id);
+  const [result, setResult] = useState<any>(null);
+  const [loadingResult, setLoadingResult] = useState(false);
+
+  useEffect(() => {
+    setLoadingResult(true);
+    getSimulation(employee.id).then((r) => {
+      setResult(r);
+      setLoadingResult(false);
+    });
+  }, [employee.id]);
 
   return (
     <div className="grid gap-5 lg:grid-cols-[20rem_1fr]">
@@ -69,9 +79,9 @@ export function SimulatorPanel() {
           </div>
 
           <div className="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
-            <Metric icon={<AlertTriangle size={14} />} label="Knowledge gap" value={`${result.knowledgeGapScore}`} accent="coral" />
-            <Metric icon={<Users size={14} />} label="Teammates exposed" value={String(result.impactedTeammates)} accent="amber" />
-            <Metric icon={<Clock size={14} />} label="Est. ramp time" value={`${result.estimatedRampWeeks}w`} accent="cyan" />
+            <Metric icon={<AlertTriangle size={14} />} label="Knowledge gap" value={loadingResult || !result ? "…" : `${result.knowledgeGapScore}`} accent="coral" />
+            <Metric icon={<Users size={14} />} label="Teammates exposed" value={loadingResult || !result ? "…" : String(result.impactedTeammates)} accent="amber" />
+            <Metric icon={<Clock size={14} />} label="Est. ramp time" value={loadingResult || !result ? "…" : `${result.estimatedRampWeeks}w`} accent="cyan" />
             <div className="flex items-center justify-center">
               <RiskGauge score={employee.riskScore} level={employee.riskLevel} size={72} label="risk" />
             </div>
@@ -80,11 +90,11 @@ export function SimulatorPanel() {
 
         <GlassPanel className="p-6">
           <h3 className="font-display text-base font-medium text-bone">Projects affected</h3>
-          {result.impactedProjects.length === 0 ? (
+          {!result || loadingResult ? (<p className="text-sm text-slate">Running simulation…</p>) : result.impactedProjects.length === 0 ? (
             <p className="mt-3 text-sm text-slate">No active projects would lose their owner.</p>
           ) : (
             <div className="mt-4 flex flex-col gap-3">
-              {result.impactedProjects.map((p) => {
+              {result.impactedProjects.map((p: any) => {
                 const c = riskColor(p.severity);
                 return (
                   <div key={p.projectId} className={cn("rounded-xl border p-4", c.border, c.bg)}>
