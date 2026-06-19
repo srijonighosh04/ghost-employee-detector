@@ -110,11 +110,11 @@ export function SimulatorPanel() {
           )}
         </GlassPanel>
 
-        {result.undocumentedAreas.length > 0 && (
+        {result?.undocumentedAreas && result.undocumentedAreas.length > 0 && (
           <GlassPanel className="p-6">
             <h3 className="font-display text-base font-medium text-bone">Undocumented areas</h3>
             <ul className="mt-3 space-y-2 text-sm text-slate">
-              {result.undocumentedAreas.map((a) => (
+              {result.undocumentedAreas.map((a: string) => (
                 <li key={a} className="flex items-start gap-2">
                   <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-alert" />
                   {a}
