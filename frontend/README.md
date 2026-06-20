@@ -1,6 +1,6 @@
-# Sentinel — Frontend
+# NexusIQ — Frontend
 
-The complete, working frontend for **Sentinel** (the Ghost Employee Detector / organizational
+The complete, working frontend for **NexusIQ** (the Ghost Employee Detector / organizational
 knowledge continuity platform). Built with Next.js 14 (App Router), TypeScript, Tailwind CSS,
 React Flow, and Framer Motion. Runs entirely on in-memory sample data — no backend required to
 explore the UI.

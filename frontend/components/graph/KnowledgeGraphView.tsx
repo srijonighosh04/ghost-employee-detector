@@ -21,6 +21,8 @@ import { Button } from "@/components/ui/Button";
 import { Employee } from "@/types";
 import Link from "next/link";
 import { fireHaptic } from "@/lib/haptics";
+import { cn } from "@/lib/utils";
+import { employees, teams } from "@/lib/mock-data";
 
 const nodeTypes = {
   employee: EmployeeNode,
@@ -29,9 +31,45 @@ const nodeTypes = {
   team: TeamNode,
 };
 
+type NodeFilter = "all" | "critical" | "high" | "medium" | "low";
+type TypeFilter = "all" | "employee" | "project" | "document" | "team";
+
+const RISK_FILTERS: { label: string; value: NodeFilter }[] = [
+  { label: "All", value: "all" },
+  { label: "Critical", value: "critical" },
+  { label: "High", value: "high" },
+  { label: "Medium", value: "medium" },
+  { label: "Low", value: "low" },
+];
+
+const TYPE_FILTERS: { label: string; value: TypeFilter }[] = [
+  { label: "All types", value: "all" },
+  { label: "Employees", value: "employee" },
+  { label: "Projects", value: "project" },
+  { label: "Documents", value: "document" },
+  { label: "Teams", value: "team" },
+];
+
 export function KnowledgeGraphView() {
-  const { nodes, edges } = useMemo(() => buildGraph(), []);
+  const { nodes: allNodes, edges } = useMemo(() => buildGraph(), []);
   const [selected, setSelected] = useState<Node | null>(null);
+  const [riskFilter, setRiskFilter] = useState<NodeFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+
+  const nodes = useMemo(() => {
+    return allNodes.map((n) => {
+      let hidden = false;
+      if (typeFilter !== "all" && n.type !== typeFilter) hidden = true;
+      if (riskFilter !== "all" && n.type === "employee") {
+        const emp = employees.find((e) => e.id === n.id);
+        if (emp && emp.riskLevel !== riskFilter) hidden = true;
+      } else if (riskFilter !== "all" && n.type !== "employee") {
+        // hide non-employee nodes when filtering by risk
+        hidden = true;
+      }
+      return { ...n, hidden };
+    });
+  }, [allNodes, riskFilter, typeFilter]);
 
   const onNodeClick = useCallback((_: unknown, node: Node) => {
     fireHaptic("select");
@@ -41,8 +79,70 @@ export function KnowledgeGraphView() {
   const isEmployee = selected?.type === "employee";
   const employeeData = isEmployee ? (selected!.data as Employee) : null;
 
+  const visibleCount = nodes.filter((n) => !n.hidden).length;
+
   return (
     <div className="relative h-[calc(100vh-9.5rem)] overflow-hidden rounded-xl2">
+      {/* Filter bar */}
+      <div className="absolute left-4 top-4 z-10 flex flex-col gap-2">
+        <GlassPanel className="flex flex-wrap gap-1.5 px-3 py-2">
+          {TYPE_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => {
+                fireHaptic("tap");
+                setTypeFilter(f.value);
+                setRiskFilter("all");
+              }}
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors",
+                typeFilter === f.value
+                  ? "bg-pulse/20 text-pulse-glow"
+                  : "text-slate hover:text-bone"
+              )}
+            >
+              {f.label}
+            </button>
+          ))}
+        </GlassPanel>
+
+        {(typeFilter === "all" || typeFilter === "employee") && (
+          <GlassPanel className="flex flex-wrap gap-1.5 px-3 py-2">
+            <span className="text-[10px] font-mono uppercase tracking-wide text-slate mr-1 self-center">Risk:</span>
+            {RISK_FILTERS.map((f) => {
+              const colors: Record<NodeFilter, string> = {
+                all: "text-slate hover:text-bone",
+                critical: "text-alert-glow",
+                high: "text-signal-glow",
+                medium: "text-pulse-glow",
+                low: "text-slate",
+              };
+              return (
+                <button
+                  key={f.value}
+                  onClick={() => {
+                    fireHaptic("tap");
+                    setRiskFilter(f.value);
+                  }}
+                  className={cn(
+                    "rounded-full px-2.5 py-1 text-[10px] font-mono uppercase tracking-wide transition-colors",
+                    riskFilter === f.value
+                      ? `${colors[f.value]} bg-white/10`
+                      : colors[f.value]
+                  )}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </GlassPanel>
+        )}
+
+        <GlassPanel className="px-3 py-1.5 text-[10px] font-mono text-slate">
+          {visibleCount} node{visibleCount !== 1 ? "s" : ""} visible
+        </GlassPanel>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -64,7 +164,8 @@ export function KnowledgeGraphView() {
         />
       </ReactFlow>
 
-      <GlassPanel className="absolute left-4 top-4 hidden gap-4 px-4 py-2.5 text-[11px] text-slate sm:flex">
+      {/* Legend — bottom left */}
+      <GlassPanel className="absolute bottom-4 left-4 hidden gap-4 px-4 py-2.5 text-[11px] text-slate sm:flex">
         <Legend color="#46C2D8" label="Team" />
         <Legend color="#EDEFF5" label="Employee" />
         <Legend color="#8FE4F2" label="Project" />
@@ -72,7 +173,7 @@ export function KnowledgeGraphView() {
       </GlassPanel>
 
       {selected && (
-        <GlassPanel variant="raised" className="absolute right-4 top-4 w-[min(20rem,calc(100vw-2rem))] p-5">
+        <GlassPanel variant="raised" className="absolute right-4 top-4 w-[min(20rem,calc(100vw-2rem))] p-5 animate-scale-in">
           <button
             onClick={() => setSelected(null)}
             className="press-feedback absolute right-3 top-3 text-slate hover:text-bone"
@@ -98,7 +199,31 @@ export function KnowledgeGraphView() {
                 <Row label="Documentation coverage" value={`${employeeData.documentationCoverage}%`} />
                 <Row label="Dependents" value={String(employeeData.dependents)} />
                 <Row label="Tenure" value={`${employeeData.tenureYears} yrs`} />
+                <Row label="Last active" value={employeeData.lastActive} />
               </dl>
+
+              {/* Doc coverage mini-bar */}
+              <div className="mt-3">
+                <div className="mb-1 flex justify-between text-[10px] font-mono text-slate">
+                  <span>Doc coverage</span>
+                  <span>{employeeData.documentationCoverage}%</span>
+                </div>
+                <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/[0.07]">
+                  <div
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${employeeData.documentationCoverage}%`,
+                      backgroundColor:
+                        employeeData.documentationCoverage >= 70
+                          ? "#46C2D8"
+                          : employeeData.documentationCoverage >= 45
+                          ? "#F0A93B"
+                          : "#E15C5C",
+                    }}
+                  />
+                </div>
+              </div>
+
               <Link href={`/dashboard/simulator?employee=${employeeData.id}`} className="mt-4 block">
                 <Button variant="primary" size="sm" className="w-full">
                   Simulate resignation

@@ -18,7 +18,7 @@ export function Hero() {
             <span className="text-gradient-signal">org chart&apos;s</span> memory.
           </h1>
           <p className="mt-6 max-w-lg text-base leading-relaxed text-slate">
-            Sentinel graphs every employee, project, and document into one Organizational
+            NexusIQ graphs every employee, project, and document into one Organizational
             Knowledge Graph, then scores who&apos;s quietly become a single point of failure —
             before their resignation letter tells you.
           </p>

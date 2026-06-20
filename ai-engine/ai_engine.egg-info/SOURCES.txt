@@ -1,4 +1,5 @@
 README.md
+__init__.py
 setup.py
 ./__init__.py
 ai_engine.egg-info/PKG-INFO

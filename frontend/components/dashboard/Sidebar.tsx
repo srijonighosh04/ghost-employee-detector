@@ -37,7 +37,7 @@ export function Sidebar() {
             <path d="M10 8L6.5 16M14 8l3.5 8" stroke="currentColor" strokeWidth="1.6" />
           </svg>
         </span>
-        Sentinel
+        NexusIQ
       </Link>
 
       <nav className="mt-6 flex flex-1 flex-col gap-1">

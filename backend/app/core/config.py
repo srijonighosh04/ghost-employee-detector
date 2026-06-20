@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     
     # Database Configuration
-    DATABASE_URL: str = "sqlite:///./sentinel.db"
+    DATABASE_URL: str = "sqlite:////tmp/sentinel.db" if os.environ.get("VERCEL") else "sqlite:///./sentinel.db"
     
     # AI/LLM Configuration (Gemini API)
     # Pydantic Settings will automatically look for these in env

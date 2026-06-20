@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Sentinel | Organizational Knowledge Continuity",
+  title: "NexusIQ | Organizational Knowledge Continuity",
   description:
-    "Sentinel maps what your organization knows, who holds it, and what breaks if they leave — before it becomes a crisis.",
+    "NexusIQ maps what your organization knows, who holds it, and what breaks if they leave — before it becomes a crisis.",
 };
 
 export default function RootLayout({

@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, Search, Bell } from "lucide-react";
 import { Avatar } from "@/components/ui/Avatar";
 import { fireHaptic } from "@/lib/haptics";
@@ -36,8 +36,23 @@ const TITLES: Record<string, { title: string; sub: string }> = {
 
 export function Topbar() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const meta = TITLES[pathname] ?? { title: "Sentinel", sub: "" };
+  const [searchVal, setSearchVal] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const meta = TITLES[pathname] ?? { title: "NexusIQ", sub: "" };
+
+  function handleSearchSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    const q = searchVal.trim();
+    if (!q) return;
+    fireHaptic("tap");
+    // Route to assistant page with query pre-filled via URL param
+    router.push(`/dashboard/assistant?q=${encodeURIComponent(q)}`);
+    setSearchVal("");
+    searchRef.current?.blur();
+  }
 
   return (
     <div className="sticky top-0 z-20 mb-6 pt-4">
@@ -59,15 +74,30 @@ export function Topbar() {
         </div>
 
         <div className="flex flex-1 items-center justify-end gap-3">
-          <div className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1.5 sm:flex">
-            <Search size={14} className="text-slate" />
+          <form
+            onSubmit={handleSearchSubmit}
+            className={cn(
+              "hidden items-center gap-2 rounded-full border bg-white/[0.03] px-3 py-1.5 sm:flex transition-all duration-200",
+              searchFocused
+                ? "border-signal/40 shadow-glow-amber w-56"
+                : "border-white/10 w-44"
+            )}
+          >
+            <Search size={14} className="shrink-0 text-slate" />
             <input
-              placeholder="Ask the graph…"
-              className="w-40 bg-transparent text-xs text-bone placeholder:text-slate focus:outline-none"
+              ref={searchRef}
+              value={searchVal}
+              onChange={(e) => setSearchVal(e.target.value)}
+              onFocus={() => setSearchFocused(true)}
+              onBlur={() => setSearchFocused(false)}
+              placeholder={searchFocused ? "Press Enter to ask the graph…" : "Ask the graph…"}
+              className="w-full bg-transparent text-xs text-bone placeholder:text-slate focus:outline-none"
             />
-          </div>
-          <button className="press-feedback flex h-9 w-9 items-center justify-center rounded-full text-slate hover:text-bone">
+          </form>
+          <button className="press-feedback flex h-9 w-9 items-center justify-center rounded-full text-slate hover:text-bone relative">
             <Bell size={17} />
+            {/* Notification dot */}
+            <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-alert animate-pulse-soft" />
           </button>
           <Avatar initials="MR" color="#46C2D8" size={32} />
         </div>
@@ -78,8 +108,12 @@ export function Topbar() {
           <div className="absolute inset-0 bg-black/60" onClick={() => setOpen(false)} />
           <div className="glass-raised absolute left-3 right-3 top-3 rounded-xl2 p-4">
             <div className="flex items-center justify-between px-1 pb-3">
-              <span className="font-display text-base font-semibold text-bone">Sentinel</span>
-              <button onClick={() => setOpen(false)} className="press-feedback text-slate hover:text-bone" aria-label="Close navigation">
+              <span className="font-display text-base font-semibold text-bone">NexusIQ</span>
+              <button
+                onClick={() => setOpen(false)}
+                className="press-feedback text-slate hover:text-bone"
+                aria-label="Close navigation"
+              >
                 <X size={20} />
               </button>
             </div>

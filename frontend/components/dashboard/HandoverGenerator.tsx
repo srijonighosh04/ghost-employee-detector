@@ -9,7 +9,7 @@ import { GlassPanel } from "@/components/ui/GlassPanel";
 import { Button } from "@/components/ui/Button";
 import { cn, riskColor } from "@/lib/utils";
 import { fireHaptic } from "@/lib/haptics";
-import { Download, FileStack, Loader2 } from "lucide-react";
+import { Download, FileStack, Loader2, Copy, Check } from "lucide-react";
 import { HandoverDoc } from "@/types";
 
 export function HandoverGenerator() {
@@ -18,6 +18,7 @@ export function HandoverGenerator() {
   const [selectedId, setSelectedId] = useState(initial);
   const [generating, setGenerating] = useState(false);
   const [doc, setDoc] = useState<HandoverDoc | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const employee = employees.find((e) => e.id === selectedId) ?? employees[0];
 
@@ -36,14 +37,19 @@ export function HandoverGenerator() {
     }
   }
 
+  function buildDocText(doc: HandoverDoc): string {
+    return [
+      doc.title,
+      `Generated: ${doc.generatedAt}`,
+      "",
+      ...doc.sections.flatMap((s) => [`## ${s.heading}`, "", s.body, ""]),
+    ].join("\n");
+  }
+
   function download() {
     if (!doc) return;
     fireHaptic("select");
-    const text = [
-      doc.title,
-      "",
-      ...doc.sections.flatMap((s) => [s.heading.toUpperCase(), s.body, ""]),
-    ].join("\n");
+    const text = buildDocText(doc);
     const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
@@ -53,6 +59,33 @@ export function HandoverGenerator() {
     a.click();
     a.remove();
     URL.revokeObjectURL(url);
+  }
+
+  function downloadMarkdown() {
+    if (!doc) return;
+    fireHaptic("select");
+    const text = buildDocText(doc);
+    const blob = new Blob([text], { type: "text/markdown;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${doc.title.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.md`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  async function copyToClipboard() {
+    if (!doc) return;
+    fireHaptic("select");
+    try {
+      await navigator.clipboard.writeText(buildDocText(doc));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard not available
+    }
   }
 
   return (
@@ -100,7 +133,7 @@ export function HandoverGenerator() {
 
       <GlassPanel variant="raised" className="p-6 sm:p-8">
         {!doc && !generating && (
-          <div className="flex h-full min-h-[20rem] flex-col items-center justify-center text-center">
+          <div className="flex h-full min-h-[20rem] flex-col items-center justify-center text-center animate-fade-in">
             <span className="flex h-12 w-12 items-center justify-center rounded-full bg-pulse/15 text-pulse-glow">
               <FileStack size={20} />
             </span>
@@ -112,7 +145,7 @@ export function HandoverGenerator() {
         )}
 
         {generating && (
-          <div className="flex h-full min-h-[20rem] flex-col items-center justify-center gap-3 text-center">
+          <div className="flex h-full min-h-[20rem] flex-col items-center justify-center gap-3 text-center animate-fade-in">
             <Loader2 size={22} className="animate-spin text-signal-glow" />
             <p className="text-sm text-slate">
               Pulling project ownership, dependencies, and existing docs for {employee.name}…
@@ -121,22 +154,53 @@ export function HandoverGenerator() {
         )}
 
         {doc && !generating && (
-          <div>
+          <div className="animate-slide-up">
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h2 className="font-display text-lg font-medium text-bone">{doc.title}</h2>
                 <p className="text-xs text-slate">{doc.generatedAt}</p>
               </div>
-              <Button variant="outline" size="sm" onClick={download}>
-                <Download size={14} /> Download .txt
-              </Button>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={copyToClipboard}
+                  className="press-feedback inline-flex items-center gap-1.5 rounded-full border border-white/15 px-3 py-2 text-xs text-bone hover:bg-white/[0.06] transition-colors"
+                >
+                  {copied ? (
+                    <>
+                      <Check size={12} className="text-pulse-glow" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Copy size={12} />
+                      Copy
+                    </>
+                  )}
+                </button>
+                <Button variant="outline" size="sm" onClick={download}>
+                  <Download size={14} /> .txt
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadMarkdown}>
+                  <Download size={14} /> .md
+                </Button>
+              </div>
             </div>
 
             <div className="mt-6 space-y-5">
-              {doc.sections.map((s) => (
-                <div key={s.heading}>
-                  <h3 className="font-mono text-xs uppercase tracking-wide text-pulse-glow">{s.heading}</h3>
-                  <p className="mt-1.5 text-sm leading-relaxed text-bone">{s.body}</p>
+              {doc.sections.map((s, i) => (
+                <div
+                  key={s.heading}
+                  className={`animate-slide-up stagger-${Math.min(i + 1, 5)}`}
+                >
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-pulse/15 font-mono text-[9px] text-pulse-glow">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <h3 className="font-mono text-xs uppercase tracking-wide text-pulse-glow">
+                      {s.heading}
+                    </h3>
+                  </div>
+                  <p className="mt-1 pl-7 text-sm leading-relaxed text-bone">{s.body}</p>
                 </div>
               ))}
             </div>
