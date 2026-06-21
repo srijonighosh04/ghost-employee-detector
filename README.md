@@ -2,11 +2,11 @@
 
 NexusIQ helps organizations map knowledge, score knowledge risk, simulate resignations, and generate AI-assisted handover briefs so critical context doesn't walk out the door.
 
-Quick links
-- Frontend (live): http://localhost:3000
-- Backend (API): http://localhost:8000 (when the backend is running)
+## Quick links
+Backend: https://nexusiq-backend.onrender.com
+Backend API base: https://nexusiq-backend.onrender/api/v1/
 
-Quick start (local)
+## Quick start (local)
 
 1) Backend
 
@@ -29,18 +29,18 @@ npm run dev
 # open http://localhost:3000
 ```
 
-Notes
+## Notes
 - The frontend includes sample data and will work without a running backend for exploration. To enable AI features, set `GEMINI_API_KEY` in the backend environment.
 - Use `DATABASE_URL` to point to Postgres in production; defaults to local SQLite for development.
 
-Repository structure
+## Repository structure
 - `frontend/` — Next.js 14 app (TypeScript, Tailwind)
 - `backend/` — FastAPI app, models, services, and tests
 - `ai-engine/` — RAG + pipeline scaffolding
 - `knowledge-graph/` — Neo4j models and Cypher queries
 - `deployment/` — Vercel + Render config
 
-Running tests
+## Running tests
 
 Backend (pytest):
 
@@ -56,12 +56,20 @@ cd frontend
 npm run build
 ```
 
-Contributing
+## Contributing
 
 1. Create a feature branch: `git checkout -b feat/your-change`
 2. Make changes, run tests and build locally.
 3. Push and open a PR against `main`.
 
-License & contact
+## Built by: 
+Frontend and deployment - Aniruddh Viswarajan
+Backend and AI Engine - Srijoni Ghosh
 
-See the repository license. For questions, open an issue or contact the maintainers.
+## Vision
+
+NexusIQ aims to transform organizational knowledge from an invisible operational risk into a measurable, searchable, and protected strategic asset.
+
+By combining Knowledge Graphs, Agentic AI, and Retrieval-Augmented Generation, NexusIQ helps organizations ensure that critical knowledge remains accessible long after employees move on.
+
+# Built for The Arch: RAG & Agentic AI Hackathon 2026.
