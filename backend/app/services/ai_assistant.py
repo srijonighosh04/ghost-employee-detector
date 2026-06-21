@@ -157,7 +157,7 @@ def answer_user_query(db: Session, query: str) -> dict:
 
     if model:
         org_context = _build_org_context(db)
-        system_prompt = f"""You are Sentinel's AI Knowledge Assistant. You have access to the organization's knowledge graph below.
+        system_prompt = f"""You are NexusIQ's AI Knowledge Assistant. You have access to the organization's knowledge graph below.
 Answer questions about ownership, dependencies, risk scores, documentation coverage, and resignation impact.
 Be concise but specific. Always cite employee names and project names from the graph.
 If you mention documents, list their titles.

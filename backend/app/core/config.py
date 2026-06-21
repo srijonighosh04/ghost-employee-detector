@@ -3,11 +3,11 @@ from typing import Optional
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    PROJECT_NAME: str = "Sentinel - Ghost Employee Detector API"
+    PROJECT_NAME: str = "NexusIQ - Ghost Employee Detector API"
     API_V1_STR: str = "/api/v1"
     
     # Database Configuration
-    DATABASE_URL: str = "sqlite:////tmp/sentinel.db" if os.environ.get("VERCEL") else "sqlite:///./sentinel.db"
+    DATABASE_URL: str = "sqlite:////tmp/nexusiq.db" if os.environ.get("VERCEL") else "sqlite:///./nexusiq.db"
     
     # AI/LLM Configuration (Gemini API)
     # Pydantic Settings will automatically look for these in env

@@ -1,6 +1,6 @@
-# Sentinel — Ghost Employee Detector
+# NexusIQ — Ghost Employee Detector
 
-An AI-powered organizational knowledge continuity platform. Sentinel builds a live
+An AI-powered organizational knowledge continuity platform. NexusIQ builds a live
 Organizational Knowledge Graph out of employees, projects, documents, and teams, scores every
 employee's Knowledge Risk, simulates the impact of a resignation before it happens, and
 generates AI-drafted handover documentation to preserve what would otherwise walk out the door.

@@ -20,7 +20,7 @@ finally:
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
-    description="Backend API for Sentinel organizational risk continuity planner.",
+    description="Backend API for NexusIQ organizational risk continuity planner.",
     version="1.0.0",
     openapi_url="/openapi.json",
     docs_url="/docs",

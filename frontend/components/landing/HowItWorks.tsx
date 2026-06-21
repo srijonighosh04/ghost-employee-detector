@@ -2,7 +2,7 @@ const STEPS = [
   {
     n: "01",
     title: "Connect & ingest",
-    body: "Sentinel reads from your existing tools — ticketing, docs, repos, org charts — no new process required from your team.",
+    body: "NexusIQ reads from your existing tools — ticketing, docs, repos, org charts — no new process required from your team.",
   },
   {
     n: "02",
