@@ -5,6 +5,7 @@ NexusIQ helps organizations map knowledge, score knowledge risk, simulate resign
 ## Quick links
 1. Backend: https://nexusiq-backend.onrender.com
 2. Backend API base: https://nexusiq-backend.onrender/api/v1/
+3. Frontend : https://frontend-pi-lake-14.vercel.app
 
 ## Quick start (local)
 
