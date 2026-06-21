@@ -1,4 +1,4 @@
--- Sentinel Mock Database Seed Data (PostgreSQL)
+-- NexusIQ Mock Database Seed Data (PostgreSQL)
 -- Insert records matching the application's mock dataset structure.
 
 -- Clear existing data

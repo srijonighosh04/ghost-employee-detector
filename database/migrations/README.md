@@ -1,6 +1,6 @@
 # Database Migrations with Alembic
 
-This folder serves as the migration control center for the Sentinel project. The backend application uses **SQLAlchemy** to interface with the database and **Alembic** to manage database schema updates.
+This folder serves as the migration control center for the NexusIQ project. The backend application uses **SQLAlchemy** to interface with the database and **Alembic** to manage database schema updates.
 
 ---
 
@@ -33,7 +33,7 @@ To enable autogeneration of migration files from backend models:
 ### 1. Update `alembic.ini`
 In the root `alembic.ini` file, update the connection URL to read dynamically or set the static URL:
 ```ini
-sqlalchemy.url = sqlite:///./backend/sentinel.db
+sqlalchemy.url = sqlite:///./backend/nexusiq.db
 # or for production PostgreSQL:
 # sqlalchemy.url = postgresql://user:password@host:port/dbname
 ```

@@ -1,6 +1,6 @@
-# Sentinel — API Endpoint Contracts
+# NexusIQ — API Endpoint Contracts
 
-This document contains JSON request/response structures and routing paths for the Sentinel REST API v1.
+This document contains JSON request/response structures and routing paths for the NexusIQ REST API v1.
 
 ---
 

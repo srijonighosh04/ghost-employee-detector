@@ -1,4 +1,4 @@
-# Neo4j Schema Definitions for Sentinel
+# Neo4j Schema Definitions for NexusIQ
 
 # Node Labels
 EMPLOYEE_LABEL = "Employee"
