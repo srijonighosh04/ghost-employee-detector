@@ -3,8 +3,8 @@
 NexusIQ helps organizations map knowledge, score knowledge risk, simulate resignations, and generate AI-assisted handover briefs so critical context doesn't walk out the door.
 
 Quick links
-- Frontend (live): https://frontend-pi-lake-14.vercel.app
-- Backend (API): https://sentinel-backend-wine.vercel.app (optional)
+- Frontend (live): http://localhost:3000
+- Backend (API): http://localhost:8000 (when the backend is running)
 
 Quick start (local)
 

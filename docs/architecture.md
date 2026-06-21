@@ -1,12 +1,12 @@
-# Sentinel — System Architecture
+# NexusIQ — System Architecture
 
-Sentinel is an AI-powered organizational knowledge continuity platform. It builds a live Organizational Knowledge Graph, scores employee knowledge risk, simulates the impact of resignations, and generates AI handover documentation.
+NexusIQ is an AI-powered organizational knowledge continuity platform. It builds a live Organizational Knowledge Graph, scores employee knowledge risk, simulates the impact of resignations, and generates AI handover documentation.
 
 ---
 
 ## Architecture Overview
 
-Sentinel is structured as a decoupled multi-tier web application consisting of a web frontend, REST backend api, relational and graph database nodes, and a RAG-backed AI reasoning pipeline.
+NexusIQ is structured as a decoupled multi-tier web application consisting of a web frontend, REST backend api, relational and graph database nodes, and a RAG-backed AI reasoning pipeline.
 
 ```mermaid
 graph TD

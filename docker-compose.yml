@@ -9,7 +9,7 @@ services:
       - "8000:8000"
     environment:
       - GEMINI_API_KEY=${GEMINI_API_KEY}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///./sentinel.db}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///./nexusiq.db}
       - NEO4J_URI=${NEO4J_URI:-}
       - NEO4J_USER=${NEO4J_USER:-}
       - NEO4J_PASSWORD=${NEO4J_PASSWORD:-}

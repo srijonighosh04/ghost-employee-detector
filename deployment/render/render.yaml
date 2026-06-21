@@ -1,9 +1,9 @@
-# Render Infrastructure-as-Code Blueprint for Sentinel
+# Render Infrastructure-as-Code Blueprint for NexusIQ
 # Deploys the FastAPI backend and a managed PostgreSQL database.
 
 services:
   - type: web
-    name: sentinel-backend
+    name: nexusiq-backend
     env: python
     rootDir: backend
     buildCommand: "pip install -r requirements.txt && pip install -e ../ai-engine"
@@ -13,7 +13,7 @@ services:
       # Automatically bind the database connection string from the PostgreSQL service
       - key: DATABASE_URL
         fromDatabase:
-          name: sentinel-db
+          name: nexusiq-db
           property: connectionString
       # Placeholder environment variables for the user to configure in Render dashboard
       - key: GEMINI_API_KEY
@@ -26,6 +26,6 @@ services:
         sync: false
 
 databases:
-  - name: sentinel-db
+  - name: nexusiq-db
     plan: free
     ipAllowList: [] # empty list allows access from Render services only (secure)

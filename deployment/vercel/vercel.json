@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/v1/:path*",
-      "destination": "https://sentinel-backend.onrender.com/api/v1/:path*"
+      "destination": "https://nexusiq-backend.onrender.com/api/v1/:path*"
     }
   ]
 }

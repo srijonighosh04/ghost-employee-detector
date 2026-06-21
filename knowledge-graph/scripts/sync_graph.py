@@ -4,7 +4,7 @@ from neo4j import GraphDatabase
 
 # Locate local SQLite database file
 BACKEND_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "backend"))
-DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "sentinel.db")
+DEFAULT_DB_PATH = os.path.join(BACKEND_DIR, "nexusiq.db")
 
 # Neo4j Environment Configuration
 NEO4J_URI = os.environ.get("NEO4J_URI") or "bolt://localhost:7687"

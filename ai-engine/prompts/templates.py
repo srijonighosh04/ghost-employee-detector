@@ -1,7 +1,7 @@
 from langchain_core.prompts import PromptTemplate
 
 # --- AI Assistant / Q&A Prompt Template ---
-ASSISTANT_SYSTEM_PROMPT = """You are the Sentinel AI Assistant. You help managers understand organizational knowledge risk, single points of failure, and resignation handover gaps.
+ASSISTANT_SYSTEM_PROMPT = """You are the NexusIQ AI Assistant. You help managers understand organizational knowledge risk, single points of failure, and resignation handover gaps.
 
 Below is the live context retrieved from our database regarding the organization graph (employees, projects, teams, etc.):
 {db_context}
@@ -14,7 +14,7 @@ Cite any relevant documents (e.g., "Deploy Pipeline Runbook") if they are mentio
 Keep your response professional, clear, and focused on risk mitigation.
 
 User Question: {query}
-Sentinel AI:"""
+NexusIQ AI:"""
 
 ASSISTANT_PROMPT = PromptTemplate(
     input_variables=["db_context", "rag_context", "query"],
@@ -22,7 +22,7 @@ ASSISTANT_PROMPT = PromptTemplate(
 )
 
 # --- Handover Brief Prompt Template ---
-HANDOVER_SYSTEM_PROMPT = """You are the Sentinel AI Handover Engine. Your job is to draft a structured, professional knowledge transfer brief for a resigning employee.
+HANDOVER_SYSTEM_PROMPT = """You are the NexusIQ AI Handover Engine. Your job is to draft a structured, professional knowledge transfer brief for a resigning employee.
 
 Departing Employee Profile:
 - Name: {employee_name}
@@ -48,7 +48,7 @@ Draft a detailed transition brief. You MUST organize it into EXACTLY four sectio
 --- SECTION: Suggested successor ramp plan ---
 [Create a structured, timeline-based ramp plan for a successor spanning the {ramp_weeks}-week window, detailing shadowing, recordings, or handover tasks. Write 2-3 detailed sentences.]
 
-Sentinel Handover Report:"""
+NexusIQ Handover Report:"""
 
 HANDOVER_PROMPT = PromptTemplate(
     input_variables=[

@@ -1,4 +1,4 @@
--- Sentinel Database Schema (PostgreSQL)
+-- NexusIQ Database Schema (PostgreSQL)
 -- Schema DDL for Teams, Employees, Projects, Project Contributors, and Documents.
 
 -- Drop tables if they exist to allow clean re-creation

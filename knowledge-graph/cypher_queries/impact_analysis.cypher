@@ -1,4 +1,4 @@
-// Sentinel Cypher Query Catalog
+// NexusIQ Cypher Query Catalog
 
 // 1. Resignation Impact Path
 // Traces the immediate and downstream impact when a specific employee leaves.

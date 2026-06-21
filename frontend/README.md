@@ -1,7 +1,6 @@
 # NexusIQ — Frontend
 
-The complete, working frontend for **NexusIQ** (the Ghost Employee Detector / organizational
-knowledge continuity platform). Built with Next.js 14 (App Router), TypeScript, Tailwind CSS,
+The complete, working frontend for **NexusIQ** (an organizational knowledge continuity platform). Built with Next.js 14 (App Router), TypeScript, Tailwind CSS,
 React Flow, and Framer Motion. Runs entirely on in-memory sample data — no backend required to
 explore the UI.
 
