@@ -22,7 +22,7 @@ export function Nav() {
           <a href="#risk-radar" className="hover:text-bone transition-colors">Risk radar</a>
         </nav>
         <div className="flex items-center gap-2">
-          <Link href="/dashboard" className="hidden sm:block">
+          <Link href="/signin" className="hidden sm:block">
             <Button variant="ghost" size="sm">Sign in</Button>
           </Link>
           <Link href="/dashboard">
