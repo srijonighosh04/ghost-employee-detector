@@ -3,9 +3,8 @@
 NexusIQ helps organizations map knowledge, score knowledge risk, simulate resignations, and generate AI-assisted handover briefs so critical context doesn't walk out the door.
 
 ## Quick links
-Backend: https://nexusiq-backend.onrender.com
-
-Backend API base: https://nexusiq-backend.onrender/api/v1/
+1. Backend: https://nexusiq-backend.onrender.com
+2. Backend API base: https://nexusiq-backend.onrender/api/v1/
 
 ## Quick start (local)
 
@@ -64,8 +63,8 @@ npm run build
 3. Push and open a PR against `main`.
 
 ## Built by: 
-Frontend and deployment - Aniruddh Viswarajan
-Backend and AI Engine - Srijoni Ghosh
+1. Frontend and deployment - Aniruddh Viswarajan
+2. Backend and AI Engine - Srijoni Ghosh
 
 ## Vision
 
