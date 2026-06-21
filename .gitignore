@@ -23,3 +23,8 @@ venv/
 # Binary / generated files (regenerate locally)
 backend/sentinel.db
 ai-engine/knowledge_store.pkl
+
+# Local DB and local submission artifacts
+nexusiq.db
+backend/nexusiq.db
+submission/
