@@ -1,74 +1,67 @@
-# Sentinel — Ghost Employee Detector
+# NexusIQ — Knowledge Continuity & Risk Radar
 
-An AI-powered organizational knowledge continuity platform. Sentinel builds a live
-Organizational Knowledge Graph out of employees, projects, documents, and teams, scores every
-employee's Knowledge Risk, simulates the impact of a resignation before it happens, and
-generates AI-drafted handover documentation to preserve what would otherwise walk out the door.
+NexusIQ helps organizations map knowledge, score knowledge risk, simulate resignations, and generate AI-assisted handover briefs so critical context doesn't walk out the door.
 
-## Quick Start (Recommended)
+Quick links
+- Frontend (live): https://frontend-pi-lake-14.vercel.app
+- Backend (API): https://sentinel-backend-wine.vercel.app (optional)
 
-### With Docker (one command)
-```bash
-cp .env.example .env
-# Edit .env and add your GEMINI_API_KEY
-docker-compose up --build
-```
-Frontend: http://localhost:3000 | Backend: http://localhost:8000
+Quick start (local)
 
-### Without Docker
+1) Backend
 
-**Backend:**
-```bash
+```powershell
 cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+venv\Scripts\activate
 pip install -r requirements.txt
-cp ../.env.example .env   # add your GEMINI_API_KEY
-uvicorn app.main:app --reload
+copy ..\.env.example .env
+set GEMINI_API_KEY=your_key_here
+venv\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
 ```
 
-**Frontend:**
+2) Frontend
+
 ```bash
 cd frontend
-npm install
-# Optional: set NEXT_PUBLIC_API_URL=http://localhost:8000 in frontend/.env.local
+npm ci
 npm run dev
+# open http://localhost:3000
 ```
 
-Open http://localhost:3000.
+Notes
+- The frontend includes sample data and will work without a running backend for exploration. To enable AI features, set `GEMINI_API_KEY` in the backend environment.
+- Use `DATABASE_URL` to point to Postgres in production; defaults to local SQLite for development.
 
-> **Note:** The frontend runs fully on sample data without the backend. For real AI-powered
-> assistant, handover, and simulation responses, start the backend with a `GEMINI_API_KEY`.
+Repository structure
+- `frontend/` — Next.js 14 app (TypeScript, Tailwind)
+- `backend/` — FastAPI app, models, services, and tests
+- `ai-engine/` — RAG + pipeline scaffolding
+- `knowledge-graph/` — Neo4j models and Cypher queries
+- `deployment/` — Vercel + Render config
 
-## Environment Variables
+Running tests
 
-Copy `.env.example` to `.env` and fill in:
+Backend (pytest):
 
-| Variable | Required | Description |
-|---|---|---|
-| `GEMINI_API_KEY` | Yes (for AI) | Get from [Google AI Studio](https://aistudio.google.com/app/apikey) |
-| `DATABASE_URL` | No | Defaults to SQLite. Use PostgreSQL URL for production. |
-| `NEO4J_URI` | No | For knowledge graph sync. Leave blank to skip. |
-| `NEXT_PUBLIC_API_URL` | No | Frontend → backend URL. Defaults to `http://localhost:8000`. |
+```powershell
+cd backend
+venv\Scripts\python.exe -m pytest -q
+```
 
-## What's implemented
+Frontend build (production):
 
-- **Frontend** (`frontend/`) — Complete Next.js app: landing page, full dashboard, interactive knowledge graph (React Flow), Resignation Impact Simulator, AI Knowledge Assistant, AI Handover Generator. Now connected to the real backend — falls back to sample data gracefully if the backend is offline.
-- **Backend** (`backend/`) — FastAPI with SQLite/PostgreSQL, risk scoring engine, resignation simulator, AI assistant (Gemini), and AI handover generator (Gemini with template fallback).
-- **AI Engine** (`ai-engine/`) — LangChain + ChromaDB RAG pipeline scaffolding, ready to wire in.
-- **Knowledge Graph** (`knowledge-graph/`) — Neo4j models and Cypher queries, ready to connect.
-- **Deployment** (`deployment/`) — Vercel (frontend) + Render (backend) configs.
+```bash
+cd frontend
+npm run build
+```
 
-## Tech Stack
+Contributing
 
-- **Frontend:** Next.js 14, TypeScript, Tailwind CSS, React Flow
-- **Backend:** FastAPI (Python)
-- **Database:** SQLite (dev) / PostgreSQL (prod)
-- **AI/LLM:** Gemini 1.5 Flash
-- **RAG & Search:** LangChain + ChromaDB
-- **Knowledge Graph:** Neo4j
-- **Deployment:** Vercel + Render / Docker
+1. Create a feature branch: `git checkout -b feat/your-change`
+2. Make changes, run tests and build locally.
+3. Push and open a PR against `main`.
 
-## API Docs
+License & contact
 
-With the backend running, visit: http://localhost:8000/docs
+See the repository license. For questions, open an issue or contact the maintainers.
